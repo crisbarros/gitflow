@@ -40,7 +40,6 @@ init() {
   require_git_repo
   require_gitflow_initialized
   gitflow_load_settings
-  VERSION_PREFIX=$(eval "echo `git config --get gitflow.prefix.versiontag`")
   PREFIX=$(git config --get gitflow.prefix.hotfix)
 }
 
@@ -63,7 +62,7 @@ cmd_list() {
 	local hotfix_branches
 	local current_branch
 	local short_names
-	hotfix_branches=$(echo "$(git_local_branches)" | grep "^$PREFIX")
+	hotfix_branches=$(echo "$(git_local_branches)")
 	if [ -z "$hotfix_branches" ]; then
 		warn "No hotfix branches exist."
                 warn ""
@@ -87,7 +86,7 @@ cmd_list() {
 
 	local branch
 	for branch in $short_names; do
-		local fullname=$PREFIX$branch
+		local fullname=$branch
 		local base=$(git merge-base "$fullname" "$MASTER_BRANCH")
 		local master_sha=$(git rev-parse "$MASTER_BRANCH")
 		local branch_sha=$(git rev-parse "$fullname")
@@ -240,14 +239,9 @@ cmd_track() {
 }
 
 cmd_finish() {
-	DEFINE_boolean fetch false "fetch from $ORIGIN before performing finish" F
-	DEFINE_boolean sign false "sign the release tag cryptographically" s
-	DEFINE_string signingkey "" "use the given GPG-key for the digital signature (implies -s)" u
-	DEFINE_string message "" "use the given tag message" m
-	DEFINE_string messagefile "" "use the contents of the given file as tag message" f
-	DEFINE_boolean push false "push to $ORIGIN after performing finish" p
+	DEFINE_boolean fetch true "don't fetch from $ORIGIN before performing finish" F
+	DEFINE_boolean push true "don't push to $ORIGIN after performing finish" p
 	DEFINE_boolean keep false "keep branch after performing finish" k
-	DEFINE_boolean notag false "don't tag this release" n
 	parse_args "$@"
 	require_version_arg
 
@@ -262,14 +256,9 @@ cmd_finish() {
 	if flag fetch; then
 		git_do fetch -q "$ORIGIN" "$MASTER_BRANCH" || \
 		  die "Could not fetch $MASTER_BRANCH from $ORIGIN."
-		git_do fetch -q "$ORIGIN" "$DEVELOP_BRANCH" || \
-		  die "Could not fetch $DEVELOP_BRANCH from $ORIGIN."
 	fi
 	if has "$ORIGIN/$MASTER_BRANCH" $(git_remote_branches); then
 		require_branches_equal "$MASTER_BRANCH" "$ORIGIN/$MASTER_BRANCH"
-	fi
-	if has "$ORIGIN/$DEVELOP_BRANCH" $(git_remote_branches); then
-		require_branches_equal "$DEVELOP_BRANCH" "$ORIGIN/$DEVELOP_BRANCH"
 	fi
 
 	# try to merge into master
